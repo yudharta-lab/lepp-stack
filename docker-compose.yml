@@ -2,11 +2,11 @@ services:
   app:
     build:
       context: .
-      dockerfile: ./bin/php8/Dockerfile
+      dockerfile: ./bin/frankenphp/Dockerfile
       args:
         PUID: ${USER_UID}
         PGID: ${USER_GID}
-    container_name: "${PROJECT_STACK_NAME}-php8"
+    container_name: "${PROJECT_STACK_NAME}-frankenphp"
     restart: "unless-stopped"
     deploy:
       resources:
@@ -15,32 +15,21 @@ services:
           memory: "${APP_LIMITS_MEMORY}"
     depends_on:
       - postgresql
+      - redis_cache
+    ports:
+      - "${WEB_SERVER_UNSECURE_PORT}:8000"
+      - "${WEB_SERVER_SECURE_PORT}:8443"
+    environment:
+      OCTANE_WORKERS: ${OCTANE_WORKERS:-auto}
+      OCTANE_MAX_REQUESTS: ${OCTANE_MAX_REQUESTS:-500}
     volumes:
       - ${APP_PATH}:/var/www:delegated
       - ./logs/php/:/var/logs/php
       - ./logs/supervisor/:/var/logs/supervisor/
+      - ./logs/caddy/:/var/log/caddy/
       - ./config/php/php.ini:/usr/local/etc/php/conf.d/php.ini
-    networks:
-      - app_network
-  web_server:
-    image: 'nginx:1.29.3-alpine'
-    container_name: "${PROJECT_STACK_NAME}-nginx"
-    restart: "unless-stopped"
-    deploy:
-      resources:
-        limits:
-          cpus : "${WEB_SERVER_LIMITS_CPU}"
-          memory: "${WEB_SERVER_LIMITS_MEMORY}"
-    ports:
-      - "${WEB_SERVER_UNSECURE_PORT}:80"
-      - "${WEB_SERVER_SECURE_PORT}:443"
-    volumes:
-      - ${APP_PATH}:/var/www:rw
-      - ./logs/nginx/:/var/log/nginx
-      - ./config/ssl/:/etc/nginx/ssl
-      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf
-    depends_on:
-      - app
+      - ./config/frankenphp/Caddyfile:/etc/caddy/Caddyfile
+      - ./config/ssl/:/etc/caddy/ssl
     networks:
       - app_network
   postgresql:

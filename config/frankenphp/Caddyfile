@@ -1,0 +1,41 @@
+# Caddyfile kustom untuk Laravel Octane + FrankenPHP.
+# Menggantikan nginx: TLS manual (cert existing), gzip, dan worker mode Octane.
+# Placeholder {$...} diisi otomatis oleh command `php artisan octane:frankenphp`.
+{
+	{$CADDY_GLOBAL_OPTIONS}
+
+	admin {$CADDY_SERVER_ADMIN_HOST}:{$CADDY_SERVER_ADMIN_PORT}
+
+	frankenphp {
+		worker {
+			file "{$APP_PUBLIC_PATH}/frankenphp-worker.php"
+			{$CADDY_SERVER_WORKER_DIRECTIVE}
+			{$CADDY_SERVER_WATCH_DIRECTIVES}
+		}
+	}
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+:8000 {
+	redir https://{host}{uri} permanent
+}
+
+:8443 {
+	tls /etc/caddy/ssl/code.crt /etc/caddy/ssl/code.key
+
+	log {
+		output file /var/log/caddy/access.log
+	}
+
+	root * "{$APP_PUBLIC_PATH}"
+	encode zstd br gzip
+
+	{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+	php_server {
+		index frankenphp-worker.php
+		try_files {path} frankenphp-worker.php
+		resolve_root_symlink
+	}
+}
