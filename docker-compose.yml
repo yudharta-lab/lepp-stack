@@ -19,6 +19,8 @@ services:
     ports:
       - "${WEB_SERVER_UNSECURE_PORT}:8000"
       - "${WEB_SERVER_SECURE_PORT}:8443"
+      # forward hanya jika development
+      # - "5173:5173"
     environment:
       OCTANE_WORKERS: ${OCTANE_WORKERS:-auto}
       OCTANE_MAX_REQUESTS: ${OCTANE_MAX_REQUESTS:-500}
